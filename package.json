@@ -1,0 +1,32 @@
+{
+  "name": "daniel-mendes-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "gsap": "^3.15.0",
+    "next": "^16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.8",
+    "typescript": "^6.0.3"
+  }
+}
