@@ -14,6 +14,18 @@ export type Project = {
 
 export const projects: Project[] = [
   {
+    id: "bounce",
+    title: "Bounce",
+    description: "Loja de equipamentos para tênis com uma experiência imersiva em 3D e animações com GSAP.",
+    category: "Tênis · E-commerce",
+    technologies: ["Next.js", "React", "TypeScript", "Three.js", "GSAP"],
+    link: "https://bounce-tennis.vercel.app",
+    source: "https://github.com/dxnzera/bounce-tennis/tree/main",
+    video: "/videos/bounce.mp4",
+    poster: "/images/bounce.webp",
+    accent: "#c8d66b",
+  },
+  {
     id: "deskclub",
     title: "Deskclub",
     description: "Marketplace para compra e venda de hardware e periféricos.",

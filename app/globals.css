@@ -110,7 +110,7 @@ button:disabled { cursor: default; opacity: .3; }
 .projects-viewport::-webkit-scrollbar { display: none; }
 .projects-stage.is-pinned .projects-viewport { overflow: hidden; scroll-snap-type: none; }
 .projects-track { position: relative; display: flex; gap: 5vw; width: max-content; }
-.project-slide { --project-ink: #f0ede5; --project-muted: #b3adb9; --project-rule: rgba(240, 237, 229, .22); --project-ui-accent: var(--accent); position: relative; width: calc(100vw - 2 * var(--gutter)); flex: 0 0 calc(100vw - 2 * var(--gutter)); display: grid; grid-template-columns: minmax(0, 1fr) 25%; align-items: center; gap: 4%; scroll-snap-align: start; padding: clamp(24px, 2.2vw, 36px); color: var(--project-ink); background: transparent; }
+.project-slide { --project-ink: #f0ede5; --project-muted: #b3adb9; --project-rule: rgba(240, 237, 229, .22); --project-ui-accent: var(--accent); position: relative; width: calc(100vw - 2 * var(--gutter)); flex: 0 0 calc(100vw - 2 * var(--gutter)); display: grid; grid-template-columns: minmax(0, 1fr) 25%; align-items: center; gap: 4%; scroll-snap-align: start; scroll-snap-stop: always; padding: clamp(24px, 2.2vw, 36px); color: var(--project-ink); background: transparent; }
 .project-slide.is-accent { --project-ink: #08152b; --project-muted: #172f53; --project-rule: rgba(8, 21, 43, .3); --project-ui-accent: #08152b; background: var(--accent); }
 .project-slide.is-accent :focus-visible { outline-color: #08152b; }
 .project-media { position: relative; width: 100%; isolation: isolate; justify-self: center; }

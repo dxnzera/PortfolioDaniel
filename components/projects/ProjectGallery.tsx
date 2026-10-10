@@ -8,6 +8,11 @@ import SocialIcon from "../ui/SocialIcon";
 import { ProjectMedia } from "./ProjectMedia";
 
 const formatIndex = (index: number) => String(index + 1).padStart(2, "0");
+const PROJECT_HOLD = 1.15;
+const PROJECT_TRANSITION = 0.85;
+const galleryDuration = (count: number) => count * PROJECT_HOLD + Math.max(0, count - 1) * PROJECT_TRANSITION;
+const projectScrollProgress = (index: number, count: number) =>
+  (index * (PROJECT_HOLD + PROJECT_TRANSITION) + PROJECT_HOLD / 2) / galleryDuration(count);
 
 function ProjectLinkArrow() {
   return (
@@ -127,21 +132,46 @@ export function ProjectGallery() {
     gsap.registerPlugin(ScrollTrigger);
     viewport.scrollLeft = 0;
     const context = gsap.context(() => {
-      const movement = gsap.to(track, {
-        x: () => -(measurementsRef.current?.distance ?? 0),
-        ease: "none",
+      gsap.set(track, { x: 0 });
+      const stops = slides.map((_, index) => projectScrollProgress(index, projectCount));
+      const movement = gsap.timeline({
         onUpdate: () => updatePosition(-Number(gsap.getProperty(track, "x"))),
         scrollTrigger: {
           trigger: stage,
           start: "top top",
-          end: () => `+=${Math.max(measurementsRef.current?.distance ?? 0, 1)}`,
+          end: () => `+=${galleryDuration(projectCount) * window.innerHeight * 0.85}`,
           pin: true,
           scrub: 0.65,
           invalidateOnRefresh: true,
           anticipatePin: 1,
+          snap: {
+            snapTo: (progress) => {
+              const phase = (progress * galleryDuration(projectCount)) % (PROJECT_HOLD + PROJECT_TRANSITION);
+              return phase <= PROJECT_HOLD ? progress : gsap.utils.snap(stops, progress);
+            },
+            directional: false,
+            inertia: false,
+            delay: 0.2,
+            duration: { min: 0.25, max: 0.55 },
+            ease: "power2.inOut",
+          },
           onRefreshInit: measure,
-          onRefresh: (self) => updatePosition(self.progress * (measurementsRef.current?.distance ?? 0)),
+          onRefresh: () => updatePosition(-Number(gsap.getProperty(track, "x"))),
         },
+      });
+      slides.forEach((_, index) => {
+        if (index > 0) {
+          movement.fromTo(track, {
+            x: () => -Math.min(measurementsRef.current?.offsets[index - 1] ?? 0, measurementsRef.current?.distance ?? 0),
+          }, {
+            x: () => -Math.min(measurementsRef.current?.offsets[index] ?? 0, measurementsRef.current?.distance ?? 0),
+            duration: PROJECT_TRANSITION,
+            ease: "power2.inOut",
+            immediateRender: false,
+          });
+        }
+        // Each card gets a stationary scroll interval before the next transition.
+        movement.to({}, { duration: PROJECT_HOLD });
       });
       triggerRef.current = movement.scrollTrigger ?? null;
 
@@ -171,7 +201,7 @@ export function ProjectGallery() {
       viewport.scrollTo({ left: offset, behavior: reducedMotion ? "auto" : "smooth" });
     } else if (triggerRef.current) {
       const trigger = triggerRef.current;
-      const progress = distance ? offset / distance : 0;
+      const progress = projectScrollProgress(clampedIndex, projectCount);
       window.scrollTo({ top: trigger.start + progress * (trigger.end - trigger.start), behavior: "smooth" });
     }
   }, [nativeScroll, projectCount, reducedMotion]);

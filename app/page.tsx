@@ -10,7 +10,6 @@ export default function Home() {
   return (
     <>
       <AmbientSurface />
-      <a className="skip-link" href="#main">Pular para o conteúdo</a>
       <Navigation />
       <main id="main">
         <Hero />

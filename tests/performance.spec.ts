@@ -49,8 +49,8 @@ async function openGallery(page: Page) {
   await page.locator(".projects-stage").evaluate((stage) => {
     window.scrollTo({ top: stage.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
   });
-  await expect(page.locator("#project-deskclub .project-media")).toBeInViewport({ ratio: 0.15 });
-  await expect(page.locator("#project-deskclub")).toHaveClass(/is-active/);
+  await expect(page.locator("#project-bounce .project-media")).toBeInViewport({ ratio: 0.15 });
+  await expect(page.locator("#project-bounce")).toHaveClass(/is-active/);
 }
 
 test("avatar uses one canvas and draws only while its visible pose changes", async ({ page }) => {
@@ -139,12 +139,12 @@ test("project videos are requested only after entering the gallery", async ({ pa
     if (new URL(request.url()).pathname.endsWith(".mp4")) videoRequests.push(request.url());
   });
   await openPage(page, true);
-  await expect(page.locator(".project-video")).toHaveCount(5);
+  await expect(page.locator(".project-video")).toHaveCount(6);
   await expect(page.locator(".project-video[src]")).toHaveCount(0);
   expect(videoRequests).toEqual([]);
 
   await openGallery(page);
-  await expect(page.locator("#project-deskclub video")).toHaveAttribute("src", "/videos/deskclub.mp4");
+  await expect(page.locator("#project-bounce video")).toHaveAttribute("src", "/videos/bounce.mp4");
   await expect.poll(() => videoRequests.length).toBeGreaterThan(0);
 });
 
@@ -153,9 +153,12 @@ test("gallery navigation and pause/play work in desktop and mobile layouts", asy
   await expect(page.locator(".projects-stage")).toHaveClass(testInfo.project.name === "mobile" ? /is-native/ : /is-pinned/);
   await openGallery(page);
   await expect(page.getByRole("button", { name: "Projeto anterior", exact: true })).toBeDisabled();
-
-  const firstVideo = page.locator("#project-deskclub video");
-  const toggle = page.locator("#project-deskclub .project-video-toggle");
+  await expect(page.locator(".project-title")).toHaveText(["Bounce", "Deskclub", "Nitefy", "Scenr", "Lanchê", "XiS Tickets"]);
+  await expect(page.locator("#project-bounce .project-link:not(.project-link-secondary)")).toHaveAttribute("href", "https://bounce-tennis.vercel.app");
+  await expect(page.locator("#project-bounce .project-link-secondary")).toHaveAttribute("href", "https://github.com/dxnzera/bounce-tennis/tree/main");
+  await expect.poll(() => page.locator("#project-bounce .project-poster").evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const firstVideo = page.locator("#project-bounce video");
+  const toggle = page.locator("#project-bounce .project-video-toggle");
   await expect(toggle).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
@@ -165,17 +168,62 @@ test("gallery navigation and pause/play work in desktop and mobile layouts", asy
   await expect.poll(() => firstVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
 
   await page.getByRole("button", { name: "Próximo projeto", exact: true }).click();
-  await expect(page.locator("#project-nitefy")).toHaveClass(/is-active/);
+  await expect(page.locator("#project-deskclub")).toHaveClass(/is-active/);
   await expect.poll(() => firstVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
   const carousel = page.getByRole("region", { name: /Projetos selecionados/ });
   await carousel.focus();
   await carousel.press("ArrowRight");
-  await expect(page.locator("#project-scenr")).toHaveClass(/is-active/);
-  await page.getByRole("button", { name: "Projeto anterior", exact: true }).click();
   await expect(page.locator("#project-nitefy")).toHaveClass(/is-active/);
+  await page.getByRole("button", { name: "Projeto anterior", exact: true }).click();
+  await expect(page.locator("#project-deskclub")).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Ir para XiS Tickets", exact: true }).click();
   await expect(page.locator("#project-xis")).toHaveClass(/is-active/);
   await expect(page.getByRole("button", { name: "Próximo projeto", exact: true })).toBeDisabled();
+});
+
+test("desktop scrolling holds each project in place and continues through the gallery", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Mobile uses native horizontal snapping");
+  await openPage(page, true);
+  await openGallery(page);
+  await page.getByRole("button", { name: "Ir para Bounce", exact: true }).click();
+
+  const projectIds = ["bounce", "deskclub", "nitefy", "scenr", "lanche", "xis"];
+  const viewportLeft = await page.locator(".projects-viewport").evaluate((element) =>
+    element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft));
+
+  for (const [index, id] of projectIds.entries()) {
+    const card = page.locator(`#project-${id}`);
+    await expect(card).toHaveClass(/is-active/);
+    await expect.poll(() => card.evaluate((element, left) => Math.abs(element.getBoundingClientRect().left - left), viewportLeft)).toBeLessThan(1);
+    for (const delta of [120, -120]) {
+      await page.mouse.wheel(0, delta);
+      const drift = await card.evaluate(async (element, left) => {
+        const started = performance.now();
+        let maximum = 0;
+        while (performance.now() - started < 900) {
+          maximum = Math.max(maximum, Math.abs(element.getBoundingClientRect().left - left));
+          await new Promise(requestAnimationFrame);
+        }
+        return maximum;
+      }, viewportLeft);
+      expect(drift, `${id} should remain stationary during a small scroll`).toBeLessThan(1);
+    }
+    if (index < projectIds.length - 1) {
+      // Release during the transition; snapping should finish aligning the next card.
+      await page.mouse.wheel(0, page.viewportSize()!.height * 1.1);
+      await expect(page.locator(`#project-${projectIds[index + 1]}`)).toHaveClass(/is-active/);
+    }
+  }
+
+  await page.mouse.wheel(0, -page.viewportSize()!.height * 1.1);
+  await expect(page.locator("#project-lanche")).toHaveClass(/is-active/);
+  await expect.poll(() => page.locator("#project-lanche").evaluate((element, left) => Math.abs(element.getBoundingClientRect().left - left), viewportLeft)).toBeLessThan(1);
+  await page.mouse.wheel(0, page.viewportSize()!.height * 1.1);
+  await expect(page.locator("#project-xis")).toHaveClass(/is-active/);
+  await expect.poll(() => page.locator("#project-xis").evaluate((element, left) => Math.abs(element.getBoundingClientRect().left - left), viewportLeft)).toBeLessThan(1);
+
+  await page.mouse.wheel(0, page.viewportSize()!.height * 2);
+  await expect(page.locator("#contact")).toBeInViewport();
 });
 
 test("reduced motion disables video autoplay while allowing manual playback", async ({ page }) => {
@@ -183,17 +231,17 @@ test("reduced motion disables video autoplay while allowing manual playback", as
   await openPage(page, true);
   await expect(page.locator(".projects-stage")).toHaveClass(/is-native/);
   await openGallery(page);
-  const firstVideo = page.locator("#project-deskclub video");
-  const toggle = page.locator("#project-deskclub .project-video-toggle");
+  const firstVideo = page.locator("#project-bounce video");
+  const toggle = page.locator("#project-bounce .project-video-toggle");
   await expect(toggle).toBeEnabled();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
   await page.getByRole("button", { name: "Próximo projeto", exact: true }).click();
-  await expect(page.locator("#project-nitefy")).toHaveClass(/is-active/);
-  await expect(page.locator("#project-nitefy .project-video-toggle")).toBeEnabled();
-  await expect.poll(() => page.locator("#project-nitefy video").evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
-  await page.getByRole("button", { name: "Projeto anterior", exact: true }).click();
   await expect(page.locator("#project-deskclub")).toHaveClass(/is-active/);
+  await expect(page.locator("#project-deskclub .project-video-toggle")).toBeEnabled();
+  await expect.poll(() => page.locator("#project-deskclub video").evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
+  await page.getByRole("button", { name: "Projeto anterior", exact: true }).click();
+  await expect(page.locator("#project-bounce")).toHaveClass(/is-active/);
   await expect.poll(() => firstVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
