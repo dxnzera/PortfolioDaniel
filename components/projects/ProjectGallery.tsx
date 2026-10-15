@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { projects } from "../../data/projects";
 import SocialIcon from "../ui/SocialIcon";
 import { ProjectMedia } from "./ProjectMedia";
+import SectionAtmosphere from "../background/SectionAtmosphere";
 
 const formatIndex = (index: number) => String(index + 1).padStart(2, "0");
 const PROJECT_HOLD = 1.15;
@@ -51,7 +52,7 @@ export function ProjectGallery() {
 
   useEffect(() => {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sizeQuery = window.matchMedia("(max-width: 767px), (max-height: 599px)");
+    const sizeQuery = window.matchMedia("(max-height: 559px), (min-width: 768px) and (max-height: 599px)");
     const updateMode = () => {
       setReducedMotion(motionQuery.matches);
       setNativeScroll(motionQuery.matches || sizeQuery.matches);
@@ -134,20 +135,26 @@ export function ProjectGallery() {
     const context = gsap.context(() => {
       gsap.set(track, { x: 0 });
       const stops = slides.map((_, index) => projectScrollProgress(index, projectCount));
+      const snapInDirection = ScrollTrigger.snapDirectional(stops);
       const movement = gsap.timeline({
         onUpdate: () => updatePosition(-Number(gsap.getProperty(track, "x"))),
         scrollTrigger: {
           trigger: stage,
           start: "top top",
-          end: () => `+=${galleryDuration(projectCount) * window.innerHeight * 0.85}`,
+          end: () => `+=${galleryDuration(projectCount) * stage.clientHeight * (window.innerWidth < 768 ? 0.55 : 0.85)}`,
           pin: true,
           scrub: 0.65,
           invalidateOnRefresh: true,
           anticipatePin: 1,
           snap: {
-            snapTo: (progress) => {
+            snapTo: (progress, trigger) => {
               const phase = (progress * galleryDuration(projectCount)) % (PROJECT_HOLD + PROJECT_TRANSITION);
-              return phase <= PROJECT_HOLD ? progress : gsap.utils.snap(stops, progress);
+              if (phase <= PROJECT_HOLD) return progress;
+              // A short touch gesture should finish the turn instead of
+              // snapping back to the card the user is leaving.
+              return window.innerWidth < 768
+                ? snapInDirection(progress, trigger?.direction ?? 1)
+                : gsap.utils.snap(stops, progress);
             },
             directional: false,
             inertia: false,
@@ -206,6 +213,36 @@ export function ProjectGallery() {
     }
   }, [nativeScroll, projectCount, reducedMotion]);
 
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || nativeScroll) return;
+    let start: { x: number; y: number } | null = null;
+    const onStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      start = event.touches.length === 1 ? { x: touch.clientX, y: touch.clientY } : null;
+    };
+    const onCancel = () => { start = null; };
+    const onEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      const origin = start;
+      start = null;
+      if (!origin || !touch) return;
+      const dx = origin.x - touch.clientX;
+      const dy = origin.y - touch.clientY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+        goToProject(activeRef.current + (dx > 0 ? 1 : -1));
+      }
+    };
+    viewport.addEventListener("touchstart", onStart, { passive: true });
+    viewport.addEventListener("touchend", onEnd, { passive: true });
+    viewport.addEventListener("touchcancel", onCancel);
+    return () => {
+      viewport.removeEventListener("touchstart", onStart);
+      viewport.removeEventListener("touchend", onEnd);
+      viewport.removeEventListener("touchcancel", onCancel);
+    };
+  }, [nativeScroll, goToProject]);
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       event.preventDefault();
@@ -218,12 +255,14 @@ export function ProjectGallery() {
   return (
     <section ref={sectionRef} className="projects-section" id="projects" aria-labelledby="projects-title">
       <div className="projects-intro">
+        <SectionAtmosphere variant="intro" />
         <div className="projects-heading">
           <h2 className="projects-title" id="projects-title" aria-label="Alguns dos meus projetos">Alguns dos meus<br /><span>projetos.</span></h2>
         </div>
       </div>
 
       <div ref={stageRef} className={`projects-stage${nativeScroll ? " is-native" : " is-pinned"}`} onKeyDown={onKeyDown}>
+        <SectionAtmosphere variant="projects" />
         <div className="projects-toolbar">
           <p className="projects-counter" aria-hidden="true"><span>{formatIndex(activeIndex)}</span><span className="projects-counter-divider">/</span><span>{String(projectCount).padStart(2, "0")}</span></p>
           <div className="projects-arrows">

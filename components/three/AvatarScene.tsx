@@ -178,11 +178,16 @@ function createLaptopScreen() {
     polygonOffsetUnits: -1,
   });
   const panel = new THREE.Mesh(geometry, material);
-  const light = new THREE.SpotLight(0xb4d3ff, 0, 5, Math.PI * 0.31, 0.85, 2);
-  light.position.set(0.092, 0.225, 0.299);
+  const light = new THREE.SpotLight(0xaacfff, 0, 5, 0.5, 1, 2);
+  light.position.set(0.085, 0.245, 0.309);
   const target = new THREE.Object3D();
-  target.position.set(0.02, 0.49, -0.12);
+  target.position.set(0.015, 0.555, -0.1);
   light.target = target;
+  const chestLight = new THREE.SpotLight(0x9dc5ff, 0, 4.5, 0.48, 1, 2);
+  chestLight.position.set(0.1, 0.185, 0.285);
+  const chestTarget = new THREE.Object3D();
+  chestTarget.position.set(0.015, 0.355, -0.13);
+  chestLight.target = chestTarget;
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
     map: textures[2],
     color: 0x689aff,
@@ -199,8 +204,8 @@ function createLaptopScreen() {
   glow.visible = false;
   const group = new THREE.Group();
   group.name = "laptop-screen";
-  group.add(panel, light, target, glow);
-  return { group, light, material, textures, glow };
+  group.add(panel, light, target, chestLight, chestTarget, glow);
+  return { group, light, chestLight, material, textures, glow };
 }
 
 export default function AvatarScene() {
@@ -269,8 +274,10 @@ export default function AvatarScene() {
     canvas.style.display = "block";
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.toneMappingExposure = 1;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
@@ -283,13 +290,26 @@ export default function AvatarScene() {
     pivot.add(placement);
     scene.add(pivot);
 
-    const ambient = new THREE.HemisphereLight(0xffffff, 0xe9e9e9, 1.2);
-    const key = new THREE.DirectionalLight(0xffffff, 1.5);
-    key.position.set(-3, 4, 5);
-    const fill = new THREE.DirectionalLight(0xffffff, 1);
+    const ambient = new THREE.HemisphereLight(0xb8c7df, 0x48576f, 1.45);
+    // Keep the warm lamp color while lifting the face and the shaded side.
+    const key = new THREE.DirectionalLight(0xffeddc, 1.65);
+    const roomKeyColor = new THREE.Color(0xffeddc);
+    const portraitKeyColor = new THREE.Color(0xffd39b);
+    key.position.set(-3, 3.5, 4.5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(mobile ? 512 : 1024, mobile ? 512 : 1024);
+    key.shadow.camera.left = -3;
+    key.shadow.camera.right = 3;
+    key.shadow.camera.top = 3;
+    key.shadow.camera.bottom = -3;
+    key.shadow.camera.far = 16;
+    key.shadow.normalBias = 0.02;
+    key.shadow.bias = -0.0002;
+    key.shadow.intensity = 0.018;
+    const fill = new THREE.DirectionalLight(0xb8c9e0, 0.85);
     fill.position.set(4, 1.5, 4);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.8);
-    rim.position.set(1, 3, -4);
+    const rim = new THREE.DirectionalLight(0x6f9fff, 0.85);
+    rim.position.set(2.5, 3, -3.8);
     scene.add(ambient, key, fill, rim);
 
     const framing = {
@@ -313,21 +333,37 @@ export default function AvatarScene() {
       canvas.dataset.avatarAngle = angle;
       canvas.dataset.modelYaw = angle;
       const beat = stage?.dataset.activeBeat;
+      const storyProgress = Number.parseFloat(hero?.dataset.storyProgress ?? "0") || 0;
+      const introLight = reducedMotion || stage?.classList.contains("is-static")
+        ? 1
+        : 1 - THREE.MathUtils.smoothstep(storyProgress, 0.1, 0.3);
+      const closingLight = THREE.MathUtils.smoothstep(storyProgress, 0.55, 0.7);
+      const portraitLight = Math.max(introLight, closingLight);
+      // Match the opening and closing portraits with a soft golden lamp light.
+      key.color.lerpColors(roomKeyColor, portraitKeyColor, portraitLight);
+      key.intensity = 1.65 + portraitLight * 0.8;
+      ambient.intensity = 1.45 + portraitLight * 0.35;
+      fill.intensity = 0.85 + portraitLight * 0.15;
       const screenBeat = beat === "1" || beat === "2";
-      const screenWeight = screenBeat && !reducedMotion
+      const screenVisibility = screenBeat && !reducedMotion
         ? THREE.MathUtils.smoothstep(-Math.cos(yaw), 0.08, 0.8)
         : 0;
 
       if (laptopScreen) {
         const texture = laptopScreen.textures[beat === "2" ? 1 : 0];
+        const screenPower = beat === "2" ? 1 : 0.85;
         laptopScreen.material.map = texture;
         laptopScreen.material.emissiveMap = texture;
-        laptopScreen.material.emissiveIntensity = screenWeight * (beat === "2" ? 1.15 : 1.45);
-        laptopScreen.light.intensity = screenWeight * 3.1;
-        laptopScreen.glow.visible = screenWeight > 0.001;
-        laptopScreen.glow.material.opacity = screenWeight * (beat === "2" ? 0.2 : 0.35);
+        // Screen illumination follows the model even when its back faces the
+        // camera. Only the decorative halo depends on the viewing angle.
+        laptopScreen.material.emissiveIntensity = screenPower * 1.35;
+        laptopScreen.light.intensity = screenPower * 2.75;
+        laptopScreen.chestLight.intensity = screenPower * 1.5;
+        laptopScreen.glow.visible = screenVisibility > 0.001;
+        laptopScreen.glow.material.opacity = screenVisibility * (beat === "2" ? 0.2 : 0.35);
       }
       canvas.dataset.screenLight = (laptopScreen?.light.intensity ?? 0).toFixed(3);
+      canvas.dataset.screenChestLight = (laptopScreen?.chestLight.intensity ?? 0).toFixed(3);
       canvas.dataset.screenGlow = (laptopScreen?.glow.material.opacity ?? 0).toFixed(3);
     };
 
@@ -351,6 +387,7 @@ export default function AvatarScene() {
         framing.target.z + distance,
       );
       camera.lookAt(framing.target);
+      camera.zoom = stage?.classList.contains("is-static") ? 1 : mobile ? 1.02 : 1.07;
       camera.updateProjectionMatrix();
     };
 
@@ -505,6 +542,8 @@ export default function AvatarScene() {
         model.traverse((child) => {
           const mesh = child as THREE.Mesh;
           if (!mesh.isMesh) return;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
           const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           materials.forEach((material) => {
             if (!(material instanceof THREE.MeshStandardMaterial)) return;
@@ -573,6 +612,7 @@ export default function AvatarScene() {
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
       canvas.removeEventListener("avatar:render", syncAnimation);
       disposeModel(scene, laptopScreen?.textures ?? []);
+      key.shadow.dispose();
       renderer.renderLists.dispose();
       renderer.dispose();
       delete canvas.dataset.sceneReady;

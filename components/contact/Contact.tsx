@@ -5,6 +5,8 @@ import { profile } from "@/data/profile";
 import Image from "next/image";
 import SocialIcon from "@/components/ui/SocialIcon";
 import PhotoCollage from "@/components/hero/PhotoCollage";
+import SectionAtmosphere from "@/components/background/SectionAtmosphere";
+import danielLogo from "@/public/images/DanielMendesLogo.png";
 
 export default function Contact() {
   const [copied, setCopied] = useState(false);
@@ -20,6 +22,7 @@ export default function Contact() {
 
   return (
     <section className="contact" id="contact" aria-labelledby="contact-title">
+      <SectionAtmosphere variant="contact" />
       <div className="contact-main">
         <div className="contact-copy">
           <h2 id="contact-title"><span>Que tal</span><span>um papo?</span></h2>
@@ -41,7 +44,7 @@ export default function Contact() {
           <svg className="contact-button-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </a>
       </div>
-      <footer className="footer"><Image className="footer-logo" src="/images/DanielMendesLogo.png" alt="Daniel Mendes" width={815} height={464} /><span>© {new Date().getFullYear()} Daniel Mendes</span><a className="back-top" href="#hero">Voltar ao início</a></footer>
+      <footer className="footer"><Image className="footer-logo" src={danielLogo} alt="Daniel Mendes" sizes="(max-width: 767px) 70px, 110px" /><span>© {new Date().getFullYear()} Daniel Mendes</span><a className="back-top" href="#hero">Voltar ao início</a></footer>
     </section>
   );
 }

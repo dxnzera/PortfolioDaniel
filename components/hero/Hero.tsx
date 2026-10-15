@@ -7,6 +7,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { avatarConfig } from "@/data/avatar";
 import EditorialScene from "@/components/three/EditorialScene";
+import danielLogo from "@/public/images/DanielMendesLogo.png";
 
 const AvatarScene = dynamic(() => import("@/components/three/AvatarScene"), { ssr: false });
 
@@ -52,7 +53,7 @@ export default function Hero() {
       }
 
       stage.classList.remove("is-static");
-      const developmentAvatarShift = () => mobile ? 0 : window.innerWidth * .36;
+      const developmentAvatarShift = () => mobile ? 0 : window.innerWidth * .44;
       const developmentTextShift = () => mobile ? 0 : -window.innerWidth * .38;
       const pose = { yaw: avatarConfig.poses[0] };
       let currentBeat = -1;
@@ -123,18 +124,23 @@ export default function Hero() {
       <div className="story-stage" ref={stageRef} data-active-beat="0">
         <div className="story-ambient" aria-hidden="true"><EditorialScene /></div>
 
-        <div className="story-avatar" role="img" aria-label="Modelo 3D de Daniel Mendes trabalhando em um notebook" data-model-state="loading">
+        <div className="story-avatar" role="img" aria-label="Modelo 3D de Daniel Mendes trabalhando em um notebook sobre uma mesa" data-model-state="loading">
           <div className="avatar-arrival">
-            <Image className="avatar-fallback" src="/images/avatar-daniel-light-poster.webp" alt="" fill loading="eager" sizes="(max-width: 767px) 88vw, (max-width: 1100px) and (orientation: portrait) 84vw, 40vw" />
+            <Image className="avatar-fallback" src="/images/avatar-daniel-light-poster.webp" alt="" fill loading="eager" sizes="(max-width: 767px) 110vw, (max-width: 1100px) and (orientation: portrait) 104vw, 52vw" />
             <AvatarScene />
           </div>
+        </div>
+
+        <div className="studio-foreground" aria-hidden="true">
+          <div className="studio-foreground-objects" />
+          <div className="studio-foreground-shadow" />
         </div>
 
         <div className="story-text">
           <div className="story-beat" data-beat="0">
             <div className="greeting-arrival">
-              <h1 id="hero-title" aria-label="Olá, me chamo Daniel Mendes"><span className="story-greeting">Olá, me chamo</span><Image className="story-logo" src="/images/DanielMendesBranco.svg" alt="Daniel Mendes" width={2388} height={1454} preload sizes="(max-width: 767px) 270px, (max-width: 1100px) 420px, 460px" /></h1>
-              <p className="story-role">Desenvolvedor front-end & designer.</p>
+              <h1 id="hero-title" aria-label="Daniel Mendes"><Image className="story-logo" src={danielLogo} alt="Daniel Mendes" preload sizes="(max-width: 767px) 270px, (max-width: 1100px) 420px, (max-width: 2243px) 31.2vw, 700px" /></h1>
+              {/* <p className="story-role">Desenvolvedor front-end & designer.</p> */}
             </div>
           </div>
           <div className="story-beat" data-beat="1" aria-hidden="true">

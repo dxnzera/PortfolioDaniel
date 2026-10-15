@@ -11,6 +11,7 @@ export default function MotionDirector() {
     media.add({ reduced: "(prefers-reduced-motion: reduce)", short: "(max-height: 599px)", motion: "(prefers-reduced-motion: no-preference)" }, (context) => {
       const intro = document.querySelector<HTMLElement>(".projects-intro");
       const heading = intro?.querySelector<HTMLElement>(".projects-heading");
+      const atmosphere = intro?.querySelector<HTMLElement>(".section-atmosphere");
       const gallery = document.querySelector<HTMLElement>(".projects-stage");
       if (!intro || !heading || !gallery) return;
       if (context.conditions?.reduced || context.conditions?.short) {
@@ -25,6 +26,10 @@ export default function MotionDirector() {
       reveal.fromTo(heading, { y: 42, opacity: 0, filter: "blur(18px)", scale: 1.03 }, { y: 0, opacity: 1, filter: "blur(0px)", scale: 1, duration: .3, ease: "power2.out" }, 0)
         .to(heading, { y: -32, opacity: 0, filter: "blur(16px)", scale: .98, duration: .22, ease: "power2.in" }, .58)
         .fromTo(gallery, { opacity: 0 }, { opacity: 1, duration: .22, ease: "power2.out" }, .78);
+      if (atmosphere) {
+        reveal.fromTo(atmosphere, { opacity: 0 }, { opacity: 1, duration: .3, ease: "power2.out" }, 0)
+          .to(atmosphere, { opacity: 0, duration: .22, ease: "power2.in" }, .58);
+      }
       gsap.from(".contact-heading h2", { y: 35, opacity: .2, duration: 1, scrollTrigger: { trigger: ".contact", start: "top 80%", end: "top 35%", scrub: .7 } });
       return () => intro.classList.remove("is-transition");
     });
